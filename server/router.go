@@ -1,18 +1,23 @@
 package server
 
-import "github.com/gin-gonic/gin"
+import (
+	"go_notes/handlers"
+
+	"github.com/gin-gonic/gin"
+)
 
 func InitRoutes() {
 	router := gin.Default()
 	/// Edit.
-	router.PUT("/note")
+	router.PUT("/note", handlers.UpdateNoteHandler)
 	/// Delete.
-	router.DELETE("/note/:id")
+	router.DELETE("/note/:id", handlers.DeleteNoteHandler)
 	/// Get.
-	router.GET("/note/:id")
+	router.GET("/note/:id", handlers.GetNoteHandler)
 	/// Create.
-	router.POST("/note/:id")
+	router.POST("/note/:id", handlers.CreateNoteHandler)
 	/// Get all.
-	router.GET("/notes")
+	router.GET("/notes", handlers.GetNotesHandler)
 
+	router.Run(":9200")
 }
