@@ -1,12 +1,16 @@
 package handlers
 
 import (
+	"encoding/json"
 	"fmt"
 	"go_notes/database"
 	"go_notes/models"
+	"log"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/go-redis/redis"
 	"github.com/google/uuid"
 	"go.mongodb.org/mongo-driver/bson"
 )
@@ -30,43 +34,52 @@ func GetNoteHandler(ctx *gin.Context) {
 func GetNotesHandler(ctx *gin.Context) {
 	authorId := 1
 	var notes []models.Note
-	collection := database.MongoClient.Database("admin").Collection(fmt.Sprintf("notes/%d", authorId))
+	val, err := database.RedisClient.Get(fmt.Sprintf("notes/%d", authorId)).Result()
+	if err == redis.Nil {
+		log.Printf("Chache not found. Loading from DB...")
+		collection := database.MongoClient.Database("admin").Collection(fmt.Sprintf("notes/%d", authorId))
 
-	cursor, err := collection.Find(ctx, bson.M{})
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	defer cursor.Close(ctx)
-
-	for cursor.Next(ctx) {
-		var note models.Note
-		err := cursor.Decode(&note)
+		cursor, err := collection.Find(ctx, bson.M{})
 		if err != nil {
 			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
-		notes = append(notes, note)
-	}
 
-	if err := cursor.Err(); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
+		defer cursor.Close(ctx)
 
-	if len(notes) == 0 {
-		ctx.JSON(http.StatusOK, "Заметок не найдено")
+		for cursor.Next(ctx) {
+			var note models.Note
+			err := cursor.Decode(&note)
+			if err != nil {
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
+			notes = append(notes, note)
+		}
+
+		if err := cursor.Err(); err != nil {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		if len(notes) == 0 {
+			ctx.JSON(http.StatusOK, "Notes not found.")
+		} else {
+			recordToCache(notes, authorId)
+			ctx.JSON(http.StatusOK, notes)
+		}
 	} else {
-		ctx.JSON(http.StatusOK, notes)
+		log.Printf("Cache found. Loading from cache...")
+		getFromCache(val, ctx)
 	}
 
 }
 
 func DeleteNoteHandler(ctx *gin.Context) {
 	id := ctx.Param("id")
+	authorId := 1
 
-	collection := database.MongoClient.Database("admin").Collection(fmt.Sprintf("notes/%d", 1))
+	collection := database.MongoClient.Database("admin").Collection(fmt.Sprintf("notes/%d", authorId))
 	filter := bson.M{"id": id}
 
 	result, err := collection.DeleteOne(ctx, filter)
@@ -78,6 +91,7 @@ func DeleteNoteHandler(ctx *gin.Context) {
 	if result.DeletedCount == 0 {
 		ctx.JSON(http.StatusOK, "Note not found")
 	} else {
+		resetCache(fmt.Sprintf("notes/%d", authorId))
 		ctx.JSON(http.StatusOK, "Note delete success")
 	}
 }
@@ -115,6 +129,7 @@ func UpdateNoteHandler(ctx *gin.Context) {
 	if result.MatchedCount == 0 {
 		ctx.JSON(http.StatusOK, "Note not found")
 	} else {
+		resetCache(fmt.Sprintf("notes/%d", note.AuthorID))
 		ctx.JSON(http.StatusOK, "Note update success")
 	}
 
@@ -138,8 +153,33 @@ func CreateNoteHandler(ctx *gin.Context) {
 			gin.H{"error": errInsert.Error()})
 	}
 
+	resetCache(fmt.Sprintf("notes/%d", note.AuthorID))
+
 	ctx.JSON(http.StatusOK, gin.H{
 		"note":    note,
 		"message": "Note create success"})
 
+}
+
+func getFromCache(val string, ctx *gin.Context) {
+	notes := make([]models.Note, 0)
+	json.Unmarshal([]byte(val), &notes)
+	ctx.JSON(http.StatusOK, notes)
+}
+
+func recordToCache(notes []models.Note, authorId int) {
+	notesJSON, err := json.Marshal(notes)
+	if err != nil {
+		log.Printf("Notes serialize error: %v", err)
+	} else {
+		err := database.RedisClient.Set(fmt.Sprintf("notes/%d", authorId), string(notesJSON), 1440*time.Minute).Err()
+		if err != nil {
+			log.Printf("Record to cache error: %v", err)
+
+		}
+	}
+}
+
+func resetCache(val string) {
+	database.RedisClient.Del()
 }

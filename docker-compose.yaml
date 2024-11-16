@@ -14,10 +14,22 @@ services:
        - db_notes_vol:/data/db
     networks:
       - server_net
+  
+  redis_notes:
+    container_name: redis_notes
+    image: redis:7.2.4
+    command: --port ${REDIS_PORT}
+    ports:
+      - ${REDIS_PORT}:${REDIS_PORT}
+    volumes:
+      - redis-data:/data
+    networks:
+      - server_net
 
     
 volumes:
   db_notes_vol: {}
+  redis-data: {}
 
 networks:
   server_net:
