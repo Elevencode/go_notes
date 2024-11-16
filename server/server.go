@@ -13,7 +13,6 @@ func InitServer() {
 		log.Fatal("Init ENV error: ", errEnvs)
 
 	} else {
-
 		log.Println("Init ENV success")
 	}
 
