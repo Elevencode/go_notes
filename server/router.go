@@ -9,13 +9,13 @@ import (
 func InitRoutes() {
 	router := gin.Default()
 	/// Edit.
-	router.PUT("/note", handlers.UpdateNoteHandler)
+	router.PUT("/note/:id", handlers.UpdateNoteHandler)
 	/// Delete.
 	router.DELETE("/note/:id", handlers.DeleteNoteHandler)
 	/// Get.
 	router.GET("/note/:id", handlers.GetNoteHandler)
 	/// Create.
-	router.POST("/note/:id", handlers.CreateNoteHandler)
+	router.POST("/note", handlers.CreateNoteHandler)
 	/// Get all.
 	router.GET("/notes", handlers.GetNotesHandler)
 
