@@ -25,11 +25,48 @@ services:
       - redis-data:/data
     networks:
       - server_net
-
     
+  notes:
+    container_name: notes
+    build: ./notes
+    depends_on:
+      - db_notes
+      - redis_notes
+    networks:
+      - server_net
+    ports:
+      - ${NOTES_PORT}:${NOTES_PORT}
+    environment:
+      NOTES_PORT: ${NOTES_PORT}
+      JWT_SECRET: ${JWT_SECRET}
+      MONGO_INITDB_HOST: ${MONGO_INITDB_HOST}
+      MONGO_INITDB_PORT: ${MONGO_INITDB_PORT}
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+      REDIS_HOST: ${REDIS_HOST}
+      REDIS_PORT: ${REDIS_PORT}
+
+  db_auth:
+    container_name: db_auth
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    image: postgres:15-alpine
+    ports:
+      - ${POSTGRES_PORT}:${POSTGRES_PORT}
+    command:
+      - 'postgres'
+      - '-c'
+      - 'port=${POSTGRES_PORT}'
+    volumes:
+      - db_auth_vol:/var/lib/postgresql/data
+    networks:
+      - server_net
+
 volumes:
   db_notes_vol: {}
   redis-data: {}
+  db_auth_vol: {}
 
 networks:
   server_net:

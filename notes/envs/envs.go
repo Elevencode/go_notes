@@ -2,8 +2,6 @@ package envs
 
 import (
 	"os"
-
-	"github.com/joho/godotenv"
 )
 
 var ServerEnvs Envs
@@ -16,12 +14,12 @@ type Envs struct {
 	NOTES_PORT                 string
 	REDIS_PORT                 string
 	REDIS_HOST                 string
+	JWT_SECRET                 string
 }
 
 func LoadEnvs() error {
-	if err := godotenv.Load(); err != nil {
-		return err
-	}
+
+	ServerEnvs.JWT_SECRET = os.Getenv("JWT_SECRET")
 
 	ServerEnvs.NOTES_PORT = os.Getenv("NOTES_PORT")
 
