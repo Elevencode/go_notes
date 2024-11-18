@@ -1,5 +1,7 @@
 package envs
 
+import "os"
+
 var ServerEnvs Envs
 
 type Envs struct {
@@ -14,15 +16,15 @@ type Envs struct {
 }
 
 func LoadEnvs() error {
-	ServerEnvs.JWT_SECRET = ""
+	ServerEnvs.JWT_SECRET = os.Getenv("JWT_SECRET")
 
-	ServerEnvs.POSTGRES_USER = "arthur"
-	ServerEnvs.POSTGRES_PASSWORD = "arthur"
-	ServerEnvs.POSTGRES_PORT = "9203"
-	ServerEnvs.POSTGRES_NAME = "postgres"
-	ServerEnvs.POSTGRES_HOST = "localhost"
-	ServerEnvs.POSTGRES_USE_SSL = "disable"
-	ServerEnvs.AUTH_PORT = "9204"
+	ServerEnvs.POSTGRES_USER = os.Getenv("POSTGRES_USER")
+	ServerEnvs.POSTGRES_PASSWORD = os.Getenv("POSTGRES_PASSWORD")
+	ServerEnvs.POSTGRES_PORT = os.Getenv("POSTGRES_PORT")
+	ServerEnvs.POSTGRES_NAME = os.Getenv("POSTGRES_NAME")
+	ServerEnvs.POSTGRES_HOST = os.Getenv("POSTGRES_HOST")
+	ServerEnvs.POSTGRES_USE_SSL = os.Getenv("POSTGRES_USE_SSL")
+	ServerEnvs.AUTH_PORT = os.Getenv("AUTH_PORT")
 
 	return nil
 }

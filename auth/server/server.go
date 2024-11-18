@@ -3,6 +3,7 @@ package server
 import (
 	"auth/database"
 	"auth/envs"
+	"auth/models"
 	"log"
 )
 
@@ -21,6 +22,7 @@ func InitServer() {
 		log.Fatal("DB connection error: ", errDatabase)
 	} else {
 		log.Println("DB connection success")
+		database.DB.AutoMigrate(&models.User{})
 	}
 }
 

@@ -1,6 +1,7 @@
 package server
 
 import (
+	"auth/envs"
 	"auth/handlers"
 
 	"github.com/gin-gonic/gin"
@@ -14,8 +15,13 @@ func InitRoutes() {
 	router.POST("/user", handlers.SignInHandler)
 	// Token refresh.
 	router.POST("/refresh", handlers.RefreshTokenHandler)
-	// Get user.
-	router.GET("/user", handlers.GetUserHandler)
 
-	router.Run(":9204")
+	auth := router.Group("/")
+	auth.Use(handlers.AuthMiddleware())
+	{
+		// Get user.
+		router.GET("/user", handlers.GetUserHandler)
+	}
+
+	router.Run(":" + envs.ServerEnvs.AUTH_PORT)
 }

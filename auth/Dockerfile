@@ -11,6 +11,6 @@ COPY . .
 
 RUN go build -o main .
 
-EXPOSE ${AUTH_PORT}
+EXPOSE ${NOTES_PORT}
 
 CMD [ "./main" ]
