@@ -16,10 +16,16 @@ import (
 )
 
 func GetNoteHandler(ctx *gin.Context) {
+	authorId, err := ExtractUserId(ctx.GetHeader("Authorization"))
+	if err != nil {
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "No access"})
+		return
+	}
+
 	id := ctx.Param("id")
 	var note models.Note
 
-	collection := database.MongoClient.Database("admin").Collection(fmt.Sprintf("notes/%d", 1))
+	collection := database.MongoClient.Database("admin").Collection(fmt.Sprintf("notes/%d", authorId))
 	filter := bson.M{"id": id}
 
 	errFind := collection.FindOne(ctx, filter).Decode(&note)
@@ -32,7 +38,12 @@ func GetNoteHandler(ctx *gin.Context) {
 }
 
 func GetNotesHandler(ctx *gin.Context) {
-	authorId := 1
+	authorId, err := ExtractUserId(ctx.GetHeader("Authorization"))
+	if err != nil {
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "No access"})
+		return
+	}
+
 	var notes []models.Note
 	val, err := database.RedisClient.Get(fmt.Sprintf("notes/%d", authorId)).Result()
 	if err == redis.Nil {
@@ -77,7 +88,11 @@ func GetNotesHandler(ctx *gin.Context) {
 
 func DeleteNoteHandler(ctx *gin.Context) {
 	id := ctx.Param("id")
-	authorId := 1
+	authorId, err := ExtractUserId(ctx.GetHeader("Authorization"))
+	if err != nil {
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "No access"})
+		return
+	}
 
 	collection := database.MongoClient.Database("admin").Collection(fmt.Sprintf("notes/%d", authorId))
 	filter := bson.M{"id": id}
@@ -97,7 +112,12 @@ func DeleteNoteHandler(ctx *gin.Context) {
 }
 
 func UpdateNoteHandler(ctx *gin.Context) {
-	authorId := 1
+	authorId, err := ExtractUserId(ctx.GetHeader("Authorization"))
+	if err != nil {
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "No access"})
+		return
+	}
+
 	id := ctx.Param("id")
 
 	var note models.Note
@@ -136,6 +156,12 @@ func UpdateNoteHandler(ctx *gin.Context) {
 }
 
 func CreateNoteHandler(ctx *gin.Context) {
+	authorId, err := ExtractUserId(ctx.GetHeader("Authorization"))
+	if err != nil {
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "No access"})
+		return
+	}
+
 	var note models.Note
 
 	if err := ctx.ShouldBindBodyWithJSON(&note); err != nil {
@@ -144,7 +170,7 @@ func CreateNoteHandler(ctx *gin.Context) {
 	}
 
 	note.Id = uuid.New().String()
-	note.AuthorID = 1
+	note.AuthorID = authorId
 	collection := database.MongoClient.Database("admin").Collection(fmt.Sprintf("notes/%d", note.AuthorID))
 
 	_, errInsert := collection.InsertOne(ctx, note)
@@ -167,7 +193,7 @@ func getFromCache(val string, ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, notes)
 }
 
-func recordToCache(notes []models.Note, authorId int) {
+func recordToCache(notes []models.Note, authorId uint) {
 	notesJSON, err := json.Marshal(notes)
 	if err != nil {
 		log.Printf("Notes serialize error: %v", err)
@@ -181,5 +207,5 @@ func recordToCache(notes []models.Note, authorId int) {
 }
 
 func resetCache(val string) {
-	database.RedisClient.Del()
+	database.RedisClient.Del(val)
 }
